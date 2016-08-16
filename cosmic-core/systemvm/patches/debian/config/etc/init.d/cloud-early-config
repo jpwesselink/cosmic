@@ -99,42 +99,67 @@ get_boot_params() {
           sed -i "s/%/ /g" /var/cache/cloud/cmdline
           ;;
      kvm)
-          if [ ! -e /dev/vport0p1 ]; then
-            log_it "/dev/vport0p1 not loaded, perhaps guest kernel is too old." && exit 2
-          fi
+        if [ ! -s /etc/init.d/qemu-guest-agent ]; then
+            break;
+        fi
 
-	      local factor=2
-	      local progress=1
-		  for i in {1..5}
-		  do
-	        while read line; do
-	          if [[ $line == cmdline:* ]]; then
-	            cmd=${line//cmdline:/}
-                echo $cmd > /var/cache/cloud/cmdline
-	          elif [[ $line == pubkey:* ]]; then
-	            pubkey=${line//pubkey:/}
-	            echo $pubkey > /var/cache/cloud/authorized_keys
-	            echo $pubkey > /root/.ssh/authorized_keys
-              fi
-            done < /dev/vport0p1
-            # In case of reboot of secstoragevm or consoleproxyvm we do not send the boot args again.
-            # So, no need to wait for them, as the boot args are already set at startup
-            # Routers and VPC do get new boot args (new linklocal address) so we should wait for it
-            # or else we'll reuse the old linklocal address and prevent the mgt server to control it.
-            if [ -s /var/cache/cloud/cmdline  ]
-            then
-              systemvm_type=$(cat /var/cache/cloud/cmdline | tr ' ' '\n' | grep type | cut -d\= -f2)
-              if [[ "${systemvm_type}" == "secstorage" || "${systemvm_type}" == "consoleproxy" ]];
-              then
-                log_it "Found a non empty cmdline file for type = ${systemvm_type}. Will now exit the loop and proceed with configuration."
-                break;
-              fi
-            fi
-            sleep ${progress}s
-            progress=$[ progress * factor ]
-		  done
-          chmod go-rwx /root/.ssh/authorized_keys
+        # Make sure the Qemu guest agent is running, or else we will be waiting forever
+        ps aux | grep qemu | grep -v grep > /dev/null 2>&1
+        if [ $? -gt 0 ]; then
+            echo "Starting Qemu guest agent"
+            /etc/init.d/qemu-guest-agent start
+        else
+            echo "Qemu guest agent already running."
+        fi
+
+        CMDLINE_FILE=/var/cache/cloud/cmdline
+        CMDLINE_FILE_INCOMING=/var/cache/cloud/cmdline_incoming
+        CMDLINE_TMP=/var/cache/cloud/cmdline
+
+        # In case of reboot of secstoragevm or consoleproxyvm we do not send the boot args again.
+        # So, no need to wait for them, as the boot args are already set at startup
+        # Routers and VPC do get new boot args (new linklocal address) so we should wait for it
+        # or else we'll reuse the old linklocal address and prevent the mgt server to control it.
+        if [ -s ${CMDLINE_FILE} ]
+        then
+          systemvm_type=$(cat ${CMDLINE_FILE} | tr ' ' '\n' | grep type | cut -d\= -f2)
+          if [[ "${systemvm_type}" == "secstorage" || "${systemvm_type}" == "consoleproxy" ]];
+          then
+              log_it "Found a non empty cmdline file for type = ${systemvm_type}. Will now exit the loop and proceed with configuration."
+              break;
+          fi
+        fi
+
+        echo "Waiting for a new ${CMDLINE_FILE_INCOMING} file to arrive.."
+        rm ${CMDLINE_FILE_INCOMING}
+
+        while [ ! -f ${CMDLINE_FILE_INCOMING} ]
+            do
+              sleep 1
+              echo -n "."
+            done
+
+        echo "Processing '${CMDLINE_FILE_INCOMING}'.."
+
+        while read line; do
+          if [[ $line == cmdline:* ]]; then
+            cmd=${line//cmdline:/}
+            echo $cmd > ${CMDLINE_FILE}
+            echo "Wrote '${cmd}' to ${CMDLINE_FILE}"
+          elif [[ $line == pubkey:* ]]; then
+            pubkey=${line//pubkey:/}
+            echo $pubkey > /var/cache/cloud/authorized_keys
+            echo $pubkey > /root/.ssh/authorized_keys
+            echo "Wrote public key to /root/.ssh/authorized_keys"
+          fi
+        done < ${CMDLINE_FILE_INCOMING}
+
+        echo "Done processing. Removing '${CMDLINE_FILE_INCOMING}'"
+        rm ${CMDLINE_FILE_INCOMING}
+
+        chmod go-rwx /root/.ssh/authorized_keys
           ;;
+
      vmware)
           vmtoolsd --cmd 'machine.id.get' > /var/cache/cloud/cmdline
           ;;
