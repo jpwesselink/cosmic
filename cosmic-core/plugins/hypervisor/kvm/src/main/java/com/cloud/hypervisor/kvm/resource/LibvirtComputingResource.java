@@ -13,7 +13,7 @@ import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperti
 import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_OVS_PVLAN_DHCP_HOST;
 import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_OVS_PVLAN_VM;
 import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_OVS_TUNNEL;
-import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_PATCH_VIA_SOCKET;
+import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_SEND_CONFIG_PROPERTIES;
 import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_PING_TEST;
 import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_RESIZE_VOLUME;
 import static com.cloud.hypervisor.kvm.resource.LibvirtComputingResourceProperties.Constants.SCRIPT_ROUTER_PROXY;
@@ -907,7 +907,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements Serv
         updateHostPasswdPath = findScriptPath(kvmScriptsDir, VRScripts.UPDATE_HOST_PASSWD);
         final String modifyVlanPath = findScriptPath(networkScriptsDir, SCRIPT_MODIFY_VLAN);
         versionstringpath = findScriptPath(kvmScriptsDir, SCRIPT_VERSIONS);
-        patchViaSocketPath = findScriptPath(kvmScriptsDir, PATH_PATCH_DIR, SCRIPT_PATCH_VIA_SOCKET);
+        patchViaSocketPath = findScriptPath(kvmScriptsDir, PATH_PATCH_DIR, SCRIPT_SEND_CONFIG_PROPERTIES);
         heartBeatPath = findScriptPath(kvmScriptsDir, SCRIPT_KVM_HEART_BEAT);
         final String createVmPath = findScriptPath(storageScriptsDir, SCRIPT_CREATE_VM);
         manageSnapshotPath = findScriptPath(storageScriptsDir, SCRIPT_MANAGE_SNAPSHOT);
